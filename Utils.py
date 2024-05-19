@@ -73,15 +73,54 @@ class Utils:
         plt.title('Pearson Correlation Matrix', fontsize=20)
         plt.tight_layout()
 
-    def fill_nan_with_frequent(self):
+    def delete_columns_with_nans(self, threshold=0.66):
+        num_rows = len(self.df)
         for column in self.df.columns:
-            if self.df[column].dtype == 'object':
-                unique_values = self.df[column].apply(lambda x: tuple(
-                    x) if isinstance(x, list) else x).unique().tolist()
-                unique_values = set(str(val) for val in unique_values)
+            nan_count = self.df[column].isna().sum()
+            if nan_count >= threshold * num_rows:
+                self.df.drop(columns=[column], inplace=True)
+                print(
+                    f"Deleted column '{column}' with {nan_count} NaN values (more than {threshold * 100}% of the rows)")
+
+    def fill_nan_with_frequent(self):
+        for column in self.df.select_dtypes(include=['object']).columns:
+            if self.df[column].isna().any():
                 most_frequent_value = self.df[column].mode()[0]
-                print(most_frequent_value)
-                # if unique_values == {'Da', 'Nu'}:
-                #     print(f"For column '{column}', most frequent value is '{most_frequent_value}'")
-                # else:
-                #     print('Nu')
+                self.df[column].fillna(most_frequent_value, inplace=True)
+                print(
+                    f"For column '{column}', filled NaN with '{most_frequent_value}'")
+
+    def detect_categorical_data(self, max_unique_values=7):
+        categorical_columns = []
+        for column in self.df.select_dtypes(include=['object']).columns:
+            # Get the number of unique values in the column
+            unique_values_count = self.df[column].nunique()
+            # Check if the number of unique values is less than or equal to max_unique_values
+            if unique_values_count <= max_unique_values:
+                categorical_columns.append(column)
+                print(
+                    f"Column '{column}' is categorical with {unique_values_count} unique values.")
+        return categorical_columns
+
+    @staticmethod
+    def plot_outliers_scatter(df, outliers_by_column):
+        for col, outliers in outliers_by_column.items():
+            plt.figure(figsize=(10, 6))
+
+            # Plot all points
+            sns.scatterplot(x=df.index, y=df[col], label='Data', color='blue')
+
+            # Highlight outliers
+            sns.scatterplot(x=outliers.index, y=outliers,
+                            label='Outliers', color='red', marker='o')
+
+            # Set plot title and labels
+            plt.title(f'Scatter Plot with Outliers for Column: {col}')
+            plt.xlabel('Index')
+            plt.ylabel(col)
+
+            # Show legend
+            plt.legend()
+
+            # Show plot
+            plt.show()
