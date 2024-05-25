@@ -3,6 +3,7 @@ from sklearn.metrics import mean_squared_error, make_scorer, r2_score
 from regression_models import models
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 class LinearRegression:
 
@@ -16,7 +17,7 @@ class LinearRegression:
         X_train, X_test, Y_train, Y_test = train_test_split(self.features, self.target, test_size=0.25)
         X_train.shape, X_test.shape, Y_train.shape, Y_test.shape
         return X_train, X_test, Y_train, Y_test, self.n_folds
-    
+
     def cross_rmse_train(self, model):
         X_train, X_test, Y_train, Y_test, n_folds = self.split_data()
         kf = KFold(n_folds, shuffle=True).get_n_splits(self.df.values)
@@ -45,14 +46,25 @@ class LinearRegression:
             best_params = model.best_params_ if hasattr(model, 'best_params_') else {}
 
             model.fit(X_train, Y_train)
-            y_pred = model.predict(X_train)
-            r_squared = r2_score(Y_train, y_pred)
+            y_pred_train = model.predict(X_train)
+            y_pred_test = model.predict(X_test)
+            r_squared = r2_score(Y_train, y_pred_train)
 
             train_predictions = model.predict(X_train)
             test_predictions = model.predict(X_test)
 
             train_rmse = self.cross_rmse_train(model).mean()
             test_rmse = self.cross_rmse_test(model).mean()
+
+            train_results = pd.DataFrame({
+                'car_id': self.df.iloc[X_train.index]['id'],  
+                'predicted_price': y_pred_train,
+            })
+
+            test_results = pd.DataFrame({
+                'car_id': self.df.iloc[X_test.index]['id'],
+                'predicted_price': y_pred_test,
+            })
 
             results = {
                 "model_name": model_name,
@@ -61,7 +73,9 @@ class LinearRegression:
                 "std_mse": std_mse,
                 "r_squared": r_squared,
                 "train_rmse": train_rmse,
-                "test_rmse": test_rmse
+                "test_rmse": test_rmse,
+                "train_results": train_results,
+                "test_results": test_results
             }
 
             plt.scatter(train_predictions, Y_train, c = "blue",  label = "Training data")
@@ -79,6 +93,9 @@ class LinearRegression:
             print(f"R-squared: {r_squared}\n")
             print(f"Train RMSE: {train_rmse}\n")
             print(f"Test RMSE: {test_rmse}\n")
+
+            train_results.to_csv(f'train_results_{model_name}.csv', index=False)
+            test_results.to_csv(f'test_results_{model_name}.csv', index=False)
 
             return results
         else:
