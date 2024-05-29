@@ -4,6 +4,7 @@ from regression_models import models
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import joblib
 
 class LinearRegression:
 
@@ -97,9 +98,17 @@ class LinearRegression:
             train_results.to_csv(f'train_results_{model_name}.csv', index=False)
             test_results.to_csv(f'test_results_{model_name}.csv', index=False)
 
+            joblib.dump(model, f'{model_name}_model.pk1')
+
             return results
         else:
             print(f"Model {model_name} not found.")
             return None
 
+    @staticmethod
+    def load_model(model_filename):
+        return joblib.load(model_filename)
 
+    @staticmethod
+    def predict(model, features):
+        return model.predict(features)
